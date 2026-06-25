@@ -1,0 +1,5 @@
+kafka-python-ng==2.2.2
+faker==25.8.0
+numpy==1.26.4
+pydantic==2.7.4
+scipy==1.13.1
