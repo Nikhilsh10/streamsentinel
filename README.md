@@ -1,15 +1,29 @@
-# StreamSentinel
+# 🛡️ StreamSentinel
 
-StreamSentinel is a real-time anomaly detection platform built to ingest high-frequency streaming events, score them via a hybrid ML approach (Isolation Forest + Autoencoder), and visualize anomalies live on a sub-500ms latency dashboard.
+<div align="center">
+  <p><strong>A Real-Time Anomaly Detection System for High-Frequency Data Streams</strong></p>
+  <p>
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-features">Features</a> •
+    <a href="#-quick-start">Quick Start</a> •
+    <a href="#-model-training">Model Training</a>
+  </p>
+</div>
+
+---
+
+**StreamSentinel** is an end-to-end, real-time anomaly detection platform. It ingests high-frequency synthetic events, scores them via a hybrid ML approach (Isolation Forest + PyTorch Autoencoder), and visualizes anomalies live on a sub-500ms latency dashboard.
+
+Built as a demonstration of production-grade ML engineering, it showcases how to bridge the gap between batch-trained models and real-time streaming inference.
 
 ## 🚀 Architecture
 
-```
+```text
 Synthetic Producer (Python)
         │
         │  JSON over Kafka topics
         ▼
-Apache Kafka (Docker, KRaft)
+Apache Kafka (KRaft mode)
         │
         │  Consumer Group: anomaly-detectors
         ▼
@@ -24,43 +38,47 @@ FastAPI Consumer Service
         │
         │  WebSocket (ws://)
         ▼
-React Dashboard (Vite, Recharts)
+React Dashboard (Vite, Recharts, Pure CSS)
 ```
 
-### Why not Redis Streams?
-Kafka was chosen over Redis Streams because of its robust consumer group offset tracking, distributed log persistence (retention), and standard integration ecosystem for downstream Big Data tools (like Spark/Flink), mimicking true enterprise deployment architectures.
+### Why Kafka over Redis Streams?
+Kafka was chosen for its robust consumer group offset tracking, distributed log persistence (retention), and standard integration ecosystem for downstream Big Data tools (like Spark/Flink), mimicking true enterprise deployment architectures.
 
 ## ✨ Features
-- **Real-Time Scoring Pipeline**: Fuses Scikit-learn Isolation Forest (contamination scoring) and PyTorch Autoencoder (reconstruction error) into a weighted confidence threshold.
+
+- **Real-Time Scoring Pipeline**: Fuses Scikit-learn **Isolation Forest** (contamination scoring) and PyTorch **Autoencoder** (reconstruction error) into a weighted confidence threshold.
 - **WebSocket Broadcast**: Scored events are broadcast directly to a React frontend instantly.
 - **Graceful Error Handling**: Robust Kafka consumer loop logic with at-least-once delivery semantics (`commit()` strictly follows database write).
-- **Explainability**: "Feature Deviation" analysis calculated and shown on the dashboard for immediate anomaly context. (Note: These are simplified deviation scores tailored for sub-500ms latency, bypassing the computationally expensive SHAP calculations).
+- **Explainability**: "Feature Deviation" analysis calculated and shown on the dashboard for immediate anomaly context. 
 
-## 🛠 Prerequisites
-- Docker & Docker Compose
-- Node.js 20+ (for local frontend dev)
-- Python 3.11+ (for local model retraining)
+## 🛠️ Prerequisites
+
+- **Docker & Docker Compose** (Ensure Docker Desktop is running)
+- **Node.js 20+** (For local frontend development)
+- **Python 3.11+** (For offline model training)
 
 ## 🏃‍♂️ Quick Start
 
-1. **Start the Stack**
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Nikhilsh10/streamsentinel.git
+   cd streamsentinel
+   ```
+
+2. **Start the Stack**
    ```bash
    docker-compose up -d
    ```
-   This command starts Kafka (KRaft mode), Kafka UI, the Synthetic Producer, the FastAPI backend, and the React frontend.
+   *This command spins up Kafka, Kafka UI, the Synthetic Producer, the FastAPI backend inference server, and the React frontend.*
 
-2. **Access the Dashboard**
-   Navigate to [http://localhost](http://localhost) (or whichever port Nginx bounds to).
-   
-3. **Kafka Admin UI**
-   Accessible at [http://localhost:8080](http://localhost:8080) for monitoring topics and consumer groups.
-
-4. **API Metrics**
-   Navigate to [http://localhost:8000/api/metrics](http://localhost:8000/api/metrics) to view real-time latency p95 and anomaly rates.
+3. **Access the Dashboard**
+   - **Main UI**: Navigate to [http://localhost](http://localhost) 
+   - **Kafka Admin UI**: Navigate to [http://localhost:8080](http://localhost:8080) for monitoring topics and consumer groups.
+   - **API Metrics**: View real-time latency p95 and anomaly rates at [http://localhost:8000/api/metrics](http://localhost:8000/api/metrics).
 
 ## 🧠 Model Training (Offline)
 
-The models provided in `models/` are pre-trained. To re-train them from scratch on fresh synthetic data:
+The models provided in `models/` are pre-trained on synthetic data. To re-train them from scratch:
 
 ```bash
 # Ensure local virtual environment is active and dependencies installed
@@ -69,16 +87,21 @@ make train
 ```
 
 ## 📊 Evaluation Metrics
-*On synthetic test set with 5% injected anomalies (point, contextual, and collective)*
-- **Fusion ROC-AUC:** > 0.82
-- **Fusion F1 Score:** > 0.74
+
+*Tested on a synthetic test set with 5% injected anomalies (point, contextual, and collective)*
+- **Fusion ROC-AUC:** `> 0.82`
+- **Fusion F1 Score:** `> 0.74`
+- **End-to-End Latency (p95):** `< 500ms`
 
 ## ⚙️ Configuration
 
-Control system behavior via `.env`:
+Control system behavior via the `.env` file at the root of the project:
 ```env
 EVENTS_PER_SECOND=20
 FUSION_THRESHOLD=0.65
 IF_WEIGHT=0.6
 AE_WEIGHT=0.4
 ```
+
+---
+*Developed by [Nikhil Sharma](https://github.com/Nikhilsh10)*
