@@ -4,7 +4,7 @@
   <p><strong>A Real-Time Anomaly Detection System for High-Frequency Data Streams</strong></p>
   <p>
     <a href="#-architecture">Architecture</a> •
-    <a href="#-features">Features</a> •
+    <a href="#-features">Features</a> • 
     <a href="#-quick-start">Quick Start</a> •
     <a href="#-model-training">Model Training</a>
   </p>
