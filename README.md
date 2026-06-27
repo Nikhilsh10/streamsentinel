@@ -1,4 +1,4 @@
-# 🛡️ StreamSentinel
+# 🛡️ StreamSentinel 
 
 <div align="center">
   <p><strong>A Real-Time Anomaly Detection System for High-Frequency Data Streams</strong></p>
