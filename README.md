@@ -89,8 +89,17 @@ make train
 ## 📊 Evaluation Metrics
 
 *Tested on a synthetic test set with 5% injected anomalies (point, contextual, and collective)*
-- **Fusion ROC-AUC:** `> 0.82`
-- **Fusion F1 Score:** `> 0.74`
+
+### Sensor Model
+- **Fusion ROC-AUC:** `0.9941`
+- **Fusion F1 Score:** `0.8413`
+- **Precision:** `0.75` | **Recall:** `0.97`
+
+### Financial Model
+- **Fusion ROC-AUC:** `0.9906`
+- **Fusion F1 Score:** `0.7143`
+- **Precision:** `0.56` | **Recall:** `0.99`
+
 - **End-to-End Latency (p95):** `< 500ms`
 
 ## ⚙️ Configuration

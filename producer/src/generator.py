@@ -6,6 +6,12 @@ from faker import Faker
 
 fake = Faker()
 
+SENSOR_DEVICES = ["device_001", "device_002", "device_003", "device_004", "device_005"]
+MERCHANT_CATEGORIES = ["grocery","fuel","restaurant","electronics",
+                       "pharmacy","clothing","travel","entertainment",
+                       "utilities","retail"]
+COUNTRY_CODES = ["IN","US","GB","SG","AE","DE","AU"]
+
 def get_iso_timestamp():
     return datetime.now(timezone.utc).isoformat()
 
@@ -35,8 +41,6 @@ def generate_sensor_event(anomaly_type=None):
             curr = np.clip(np.random.normal(8.0, 1.0), 0, 10)
             
     elif anomaly_type == 'contextual':
-        # Plausible values but impossible combination
-        # e.g., High temperature but very low current (motor off but hot, normally means external fire)
         temp = np.clip(np.random.normal(90, 2), 40, 100)
         curr = np.clip(np.random.normal(0.5, 0.1), 0, 10)
         
@@ -44,7 +48,7 @@ def generate_sensor_event(anomaly_type=None):
         "event_id": str(uuid.uuid4()),
         "stream": "sensor",
         "timestamp": get_iso_timestamp(),
-        "device_id": f"device_{random.randint(1, 50):03d}",
+        "device_id": random.choice(SENSOR_DEVICES),
         "temperature": round(float(temp), 2),
         "vibration": round(float(vib), 3),
         "pressure": round(float(press), 2),
@@ -61,16 +65,13 @@ def generate_financial_event(anomaly_type=None):
     
     # Normal distribution
     amount = round(np.random.lognormal(mean=3.5, sigma=1.0), 2)
-    merchants = ["electronics", "groceries", "dining", "travel", "entertainment"]
-    merchant = random.choices(merchants, weights=[10, 40, 30, 5, 15])[0]
+    merchant = random.choice(MERCHANT_CATEGORIES)
     hour = random.randint(0, 23)
     velocity = random.choices([0, 1, 2, 3], weights=[70, 20, 8, 2])[0]
     
     if anomaly_type == 'point':
-        # Unusually high amount
         amount = round(np.random.lognormal(mean=7.0, sigma=0.5), 2)
     elif anomaly_type == 'collective':
-        # Normal amount, but high velocity_30s
         velocity = random.randint(10, 20)
 
     return {
@@ -82,7 +83,7 @@ def generate_financial_event(anomaly_type=None):
         "merchant_category": merchant,
         "hour_of_day": int(hour),
         "velocity_30s": int(velocity),
-        "country_code": fake.country_code(),
+        "country_code": random.choice(COUNTRY_CODES),
         "is_injected_anomaly": is_anomaly
     }
 

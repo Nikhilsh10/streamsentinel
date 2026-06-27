@@ -8,8 +8,9 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check(request: Request):
+    import time
     app_state = request.app.state
-    uptime = (request.app.state.start_time - np.datetime64('now')).astype(float) * -1 # simplified
+    uptime = time.time() - app_state.start_time
     return {
         "status": "ok",
         "kafka_connected": True, # Simplification
@@ -18,7 +19,7 @@ async def health_check(request: Request):
             "ae_sensor": hasattr(app_state, "ae_sensor")
         },
         "anomaly_count_24h": app_state.anomaly_counter,
-        "uptime_seconds": 0.0 # replace with actual
+        "uptime_seconds": uptime
     }
 
 @router.get("/metrics", response_model=MetricsResponse)

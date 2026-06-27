@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStreamSentinel } from './hooks/useStreamSentinel';
-import { EventFeed } from './components/EventFeed';
+import EventFeed from './components/EventFeed';
 import { FeatureBars } from './components/FeatureBars';
 import { ReconstructionChart } from './components/ReconstructionChart';
 
