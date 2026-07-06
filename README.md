@@ -1,4 +1,4 @@
-# 🛡️ StreamSentinel 
+# 🛡️ StreamSentinel
 
 <div align="center">
   <p><strong>A Real-Time Anomaly Detection System for High-Frequency Data Streams</strong></p>
@@ -6,7 +6,8 @@
     <a href="#-architecture">Architecture</a> •
     <a href="#-features">Features</a> • 
     <a href="#-quick-start">Quick Start</a> •
-    <a href="#-model-training">Model Training</a>
+    <a href="#-evaluation-results">Evaluation Results</a> •
+    <a href="#-design-decisions">Design Decisions</a>
   </p>
 </div>
 
@@ -21,18 +22,18 @@ Built as a demonstration of production-grade ML engineering, it showcases how to
 ```text
 Synthetic Producer (Python)
         │
-        │  JSON over Kafka topics
+        │  JSON over Kafka topics (3 partitions each)
         ▼
 Apache Kafka (KRaft mode)
         │
-        │  Consumer Group: anomaly-detectors
+        │  Consumer Group: anomaly-detectors-v1
         ▼
 FastAPI Consumer Service
   ├── Kafka Consumer (aiokafka)
   ├── Preprocessor (StandardScaler)
   ├── Isolation Forest (sklearn)
   ├── Autoencoder (PyTorch)
-  ├── Score Fusion Layer
+  ├── Score Fusion Layer (weighted IF+AE)
   ├── SQLite Writer (anomalies only)
   └── WebSocket Manager
         │
@@ -41,70 +42,89 @@ FastAPI Consumer Service
 React Dashboard (Vite, Recharts, Pure CSS)
 ```
 
-### Why Kafka over Redis Streams?
-Kafka was chosen for its robust consumer group offset tracking, distributed log persistence (retention), and standard integration ecosystem for downstream Big Data tools (like Spark/Flink), mimicking true enterprise deployment architectures.
+![StreamSentinel Dashboard](docs/dashboard_screenshot.png)
 
 ## ✨ Features
 
 - **Real-Time Scoring Pipeline**: Fuses Scikit-learn **Isolation Forest** (contamination scoring) and PyTorch **Autoencoder** (reconstruction error) into a weighted confidence threshold.
-- **WebSocket Broadcast**: Scored events are broadcast directly to a React frontend instantly.
-- **Graceful Error Handling**: Robust Kafka consumer loop logic with at-least-once delivery semantics (`commit()` strictly follows database write).
-- **Explainability**: "Feature Deviation" analysis calculated and shown on the dashboard for immediate anomaly context. 
+- **WebSocket Broadcast**: Scored events are broadcast directly to a React frontend instantly with automatic reconnection.
+- **Graceful Error Handling**: Robust Kafka consumer loop with `try/except` per message — a single bad event never kills the loop. At-least-once delivery with offset commit strictly after DB write.
+- **Anomaly Gauge**: Live SVG gauge showing anomaly rate, color-coded green/yellow/red.
+- **Explainability**: Feature deviation analysis calculated and shown on the dashboard for immediate anomaly context.
+- **3-Partition Topics**: Kafka topics created with 3 partitions for parallelism via `kafka-init` service.
 
 ## 🛠️ Prerequisites
 
 - **Docker & Docker Compose** (Ensure Docker Desktop is running)
-- **Node.js 20+** (For local frontend development)
 - **Python 3.11+** (For offline model training)
 
 ## 🏃‍♂️ Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Nikhilsh10/streamsentinel.git
-   cd streamsentinel
-   ```
+### Step 1 — Train models locally (one-time setup)
 
-2. **Start the Stack**
-   ```bash
-   docker-compose up -d
-   ```
-   *This command spins up Kafka, Kafka UI, the Synthetic Producer, the FastAPI backend inference server, and the React frontend.*
+```bash
+pip install -r scripts/requirements.txt
+python scripts/generate_training_data.py
+python scripts/train_isolation_forest.py
+python scripts/train_autoencoder.py
+python scripts/evaluate_models.py
+```
 
-3. **Access the Dashboard**
-   - **Main UI**: Navigate to [http://localhost](http://localhost) 
-   - **Kafka Admin UI**: Navigate to [http://localhost:8080](http://localhost:8080) for monitoring topics and consumer groups.
-   - **API Metrics**: View real-time latency p95 and anomaly rates at [http://localhost:8000/api/metrics](http://localhost:8000/api/metrics).
+All gates must pass before continuing.
+
+### Step 2 — Start the stack
+
+```bash
+docker-compose up -d
+```
+
+### Step 3 — Create Kafka topics (required after every fresh start)
+
+```bash
+docker exec streamsentinel-kafka kafka-topics --bootstrap-server localhost:9092 \
+  --create --if-not-exists --topic sensor-events --partitions 3 --replication-factor 1
+docker exec streamsentinel-kafka kafka-topics --bootstrap-server localhost:9092 \
+  --create --if-not-exists --topic financial-events --partitions 3 --replication-factor 1
+```
+
+### Step 4 — Access
+
+| Service    | URL                              |
+|------------|----------------------------------|
+| Dashboard  | http://localhost:80              |
+| API Health | http://localhost:8000/api/health |
+| API Metrics| http://localhost:8000/api/metrics|
+| Kafka UI   | http://localhost:8080            |
 
 ## 🧠 Model Training (Offline)
 
-The models provided in `models/` are pre-trained on synthetic data. To re-train them from scratch:
+The models provided in `models/` are pre-trained on synthetic data. To re-train from scratch:
 
 ```bash
-# Ensure local virtual environment is active and dependencies installed
-make generate-data
-make train
+pip install -r scripts/requirements.txt
+python scripts/generate_training_data.py   # generates data/*.parquet
+python scripts/train_isolation_forest.py   # saves models/if_*.joblib
+python scripts/train_autoencoder.py        # saves models/ae_*.pth
+python scripts/evaluate_models.py          # must print ALL GATES PASSED
 ```
 
-## 📊 Evaluation Metrics
+## 📊 Evaluation Results
 
-*Tested on a synthetic test set with 5% injected anomalies (point, contextual, and collective)*
+Evaluated on 2,500 labeled synthetic events per stream (5% injected anomalies: point, contextual, and collective types). Fusion threshold: 0.65.
 
-### Sensor Model
-- **Fusion ROC-AUC:** `0.9941`
-- **Fusion F1 Score:** `0.8413`
-- **Precision:** `0.75` | **Recall:** `0.97`
+| Stream    | ROC-AUC | F1     | Precision | Recall |
+|-----------|---------|--------|-----------|--------|
+| Sensor    | 0.9952  | 0.8392 | 0.73      | 0.99   |
+| Financial | 0.9893  | 0.7407 | 0.59      | 0.99   |
 
-### Financial Model
-- **Fusion ROC-AUC:** `0.9906`
-- **Fusion F1 Score:** `0.7143`
-- **Precision:** `0.56` | **Recall:** `0.99`
+High recall (0.99) reflects deliberate threshold tuning to minimize missed anomalies. In fraud and safety monitoring, a false negative (missed real anomaly) is costlier than a false positive. Threshold 0.45 was tested and rejected: F1 dropped to 0.46–0.56.
 
-- **End-to-End Latency (p95):** `< 500ms`
+**End-to-End Latency (avg):** `< 10ms`
 
 ## ⚙️ Configuration
 
 Control system behavior via the `.env` file at the root of the project:
+
 ```env
 EVENTS_PER_SECOND=20
 FUSION_THRESHOLD=0.65
@@ -112,5 +132,20 @@ IF_WEIGHT=0.6
 AE_WEIGHT=0.4
 ```
 
+## 🧩 Design Decisions
+
+**Why Kafka over Redis Streams?**
+Kafka's append-only log enables consumer group offset tracking, partition-based parallelism (3 partitions per topic), and durable replay — critical for audit trails in fraud detection. Redis Streams lacks the retention and replay semantics needed for production anomaly pipelines.
+
+**Why Isolation Forest + Autoencoder fusion?**
+Isolation Forest detects global point anomalies (features far from all clusters). The Autoencoder detects contextual anomalies (individually normal values in impossible combinations). They disagree on contextual anomalies — IF gives low score (values in range), AE gives high error (combination unseen in training). Fusion weight: IF=0.6, AE=0.4. Configurable via environment variables.
+
+**Delivery semantics**
+At-least-once delivery: Kafka offset is committed strictly after DB write. If the service crashes between scoring and commit, the event reprocesses. Idempotency is guaranteed by the UNIQUE constraint on `event_id` in SQLite.
+
+**Why KRaft mode for Kafka?**
+KRaft (no ZooKeeper) reduces the container count by 1, simplifies the startup dependency chain, and is the direction Kafka has been heading since 3.x. Fewer moving parts = faster CI and easier local development.
+
 ---
+
 *Developed by [Nikhil Sharma](https://github.com/Nikhilsh10)*

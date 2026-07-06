@@ -1,1 +1,1 @@
-{"threshold": 0.00013567024943768072, "features": ["amount", "hour_of_day", "velocity_30s"]}
+{"threshold": 0.00011500245891511447, "features": ["amount", "hour_of_day", "velocity_30s"]}

@@ -229,3 +229,11 @@ body {
   width: 50px;
   text-align: right;
 }
+
+/* AnomalyGauge */
+.gauge-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+}

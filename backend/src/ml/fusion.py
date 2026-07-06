@@ -6,11 +6,13 @@ from ..db.models import ScoredEvent
 from ..config import settings
 
 def normalize_if_score(scores):
-    scores = -scores
-    # Rough normalization assuming min -0.5, max 0.5 for demonstration
-    # In production, use fitted scaler or actual min/max observed in training
-    min_s, max_s = -0.5, 0.5 
-    norm = (scores - min_s) / (max_s - min_s)
+    scores = -scores  # invert: higher = more anomalous
+    # Calibrated to actual IsolationForest score_samples output range:
+    # Normal events: raw ~[-0.75, -0.45] → inverted [0.45, 0.75]
+    # Anomalies:     raw < -0.75         → inverted > 0.75
+    # Map [0.4, 0.9] → [0, 1] so normal events score ~0.1-0.7,
+    # only genuine outliers push near 1.0.
+    norm = (scores - 0.4) / (0.9 - 0.4)
     return np.clip(norm, 0, 1)
 
 async def score_event(app_state, event_data: dict) -> ScoredEvent:
