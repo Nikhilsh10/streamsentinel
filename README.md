@@ -13,7 +13,7 @@
 
 ---
 
-**StreamSentinel** is an end-to-end, real-time anomaly detection platform. It ingests high-frequency synthetic events, scores them via a hybrid ML approach (Isolation Forest + PyTorch Autoencoder), and visualizes anomalies live on a sub-500ms latency dashboard.
+**StreamSentinel** is an end-to-end, real-time anomaly detection platform. It ingests high-frequency synthetic events, scores them via a hybrid ML approach (Isolation Forest + PyTorch Autoencoder), and visualizes anomalies live with p95 latency < 10ms.
 
 Built as a demonstration of production-grade ML engineering, it showcases how to bridge the gap between batch-trained models and real-time streaming inference.
 
@@ -119,7 +119,7 @@ Evaluated on 2,500 labeled synthetic events per stream (5% injected anomalies: p
 
 High recall (0.99) reflects deliberate threshold tuning to minimize missed anomalies. In fraud and safety monitoring, a false negative (missed real anomaly) is costlier than a false positive. Threshold 0.45 was tested and rejected: F1 dropped to 0.46–0.56.
 
-**End-to-End Latency (avg):** `< 10ms`
+**End-to-End Latency (p95):** `< 10ms`
 
 ## ⚙️ Configuration
 
